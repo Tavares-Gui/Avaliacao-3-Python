@@ -27,6 +27,7 @@ Acesse:
 
 | Recurso | Endereço |
 | --- | --- |
+| Painel HTML e CSS | http://127.0.0.1:8000/ |
 | API navegável do DRF | http://127.0.0.1:8000/api/ |
 | Documentação interativa Swagger | http://127.0.0.1:8000/api/docs/ |
 | Schema OpenAPI | http://127.0.0.1:8000/api/schema/ |
@@ -192,6 +193,46 @@ Ordenação de clientes: `nome`, `criado_em`, `id`. De ordens: `criado_em`, `val
 ```
 
 A soma inclui todos os status selecionados, inclusive canceladas; não representa faturamento. Para somar só ordens concluídas, use `?status=concluida`.
+
+## Interface HTML e CSS (Bancada)
+
+Abra **http://127.0.0.1:8000/** após iniciar o servidor com o mesmo comando `manage.py runserver`. Não há build, npm, JavaScript, CDN ou dependência nova para o painel. Se usar outra porta no servidor, use a mesma porta no navegador.
+
+O painel oferece clientes e ordens, criação, edição completa, alteração parcial, exclusão com confirmação, consulta por ID, relacionamentos, busca, filtros de status, ordenação e paginação. O resumo no topo sempre considera todas as ordens, independentemente dos filtros da tabela.
+
+- **Novo cadastro:** envia POST à API.
+- **Abrir:** consulta o detalhe com GET e preenche o formulário.
+- **Salvar alterações:** envia todos os campos editáveis com PUT.
+- **Alterar apenas o status/telefone:** envia um campo com PATCH.
+- **Excluir:** abre uma confirmação; somente o botão “Confirmar exclusão” envia DELETE.
+- **Consultar pelo ID:** permite demonstrar GET 200 e 404.
+- O painel da última requisição mostra método, rota e **status real da API**, além do JSON em “Ver resposta da API”.
+- Erros de validação aparecem junto aos campos e as entradas são preservadas.
+- Atualizar a página após salvar não reenvia o formulário.
+
+### Como funciona sem JavaScript?
+
+O navegador envia formulários HTML ao Django. A view `assistencia/painel.py` usa `urllib.request` (biblioteca padrão do Python) para chamar os endpoints reais da API no mesmo host/porta. O DRF continua responsável pelas validações e pela persistência.
+
+```text
+Formulário HTML -> view do painel -> HTTP para /api/ -> DRF -> SQLite
+                                     resposta JSON/status
+                   <- sessão e redirecionamento <-
+Navegador <- página HTML com resultado
+```
+
+Formulários HTML comuns só enviam GET ou POST; quem envia PUT, PATCH e DELETE à API é o Python no servidor. Por isso, a navegação do formulário responde com redirecionamento 302 e depois uma página 200, enquanto o painel mostra o código da chamada interna à API (201, 400, 204 etc.). O terminal também registra essa chamada.
+
+Os formulários têm proteção CSRF e o template escapa o texto inserido pelos usuários. `novalidate` permite que entradas incorretas cheguem ao serializer, para demonstrar os erros reais da API. O resultado fica temporariamente na sessão para usar o padrão POST/Redirect/GET, evitando cadastros duplicados por atualização de página.
+
+Use o `runserver` normal, **sem `--nothreading`**: ele precisa atender a página e a chamada à API simultaneamente. A interface foi preparada para a demonstração local; em produção, esse consumo interno exigiria configuração de concorrência e implantação adequada. Se não houver resposta, aparece “Sem conexão”, sem inventar um código HTTP.
+
+Arquivos da interface:
+- `assistencia/painel.py`: recebe formulários e chama a API.
+- `assistencia/templates/assistencia/painel.html`: estrutura e formulários.
+- `assistencia/static/assistencia/painel.css`: aparência e adaptação de layout.
+- `config/urls.py`: página inicial.
+- `assistencia/tests/test_painel.py`: testes dos formulários contra uma API real, em servidor/banco de testes descartáveis.
 
 ## Testes e verificações
 

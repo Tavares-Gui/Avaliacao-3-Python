@@ -41,6 +41,30 @@ Na criação: o DRF chama `serializer.is_valid()`, salva o objeto e responde `20
 
 A coleção Postman já possui essa sequência e confere os códigos. Um erro na sequência pode deixar dados de demonstração; eles podem ser removidos pela API. O e-mail da coleção usa um GUID por execução para evitar conflito com execuções anteriores.
 
+## Demonstração pelo painel, sem Swagger
+
+Abra http://127.0.0.1:8000/ com o servidor rodando. A interface usa apenas HTML e CSS; o Django envia as chamadas HTTP à API.
+
+1. Entre em **Clientes**, preencha o formulário e cadastre. Mostre **201 Created** e expanda **Ver resposta da API** para ver o ID.
+2. Clique em **Abrir** na linha do cliente. Mostre o **GET 200** e o detalhe.
+3. Edite o nome e use **Salvar alterações**: **PUT 200**.
+4. Expanda **Alterar apenas o telefone**, informe outro telefone e atualize: **PATCH 200**.
+5. Entre em **Ordens de serviço**, escolha o cliente e cadastre uma ordem: **POST 201**.
+6. Abra a ordem. Mostre **Cliente vinculado** e o JSON aninhado.
+7. Salve o formulário completo: **PUT 200**. Depois expanda **Alterar apenas o status**: **PATCH 200**.
+8. Use filtros, busca, ordenação e **Próxima** para demonstrar a listagem.
+9. Abra a ordem, coloque um valor negativo e salve: **400 Bad Request**, com mensagem ao lado do campo. Corrija depois.
+10. No cadastro de cliente, use um e-mail inválido: **400**. Os dados digitados permanecem para correção.
+11. Abra um cliente com ordens e clique em **Excluir cliente**, depois **Confirmar exclusão**: **400**, pela proteção do relacionamento.
+12. Exclua a ordem criada na apresentação: **204 No Content**, sem corpo. Depois exclua seu cliente: **204**.
+13. Em **Consultar pelo ID**, informe um dos IDs excluídos: **404 Not Found**.
+
+O resumo superior é geral e não muda de escopo quando a tabela é filtrada. Ele mostra estimativas, não faturamento.
+
+Explique a diferença entre as duas requisições: o navegador envia o formulário ao painel; a view Python chama a API com o método adequado. O painel exibe o status desta chamada à API. Não há simulação de sucesso/erro.
+
+Para demonstrar 500, continue usando o teste automatizado de falha simulada. Não é necessário nem desejável manter uma operação propositalmente quebrada na interface.
+
 ## Perguntas prováveis
 
 ### Por que esse relacionamento é 1:N?
@@ -121,7 +145,7 @@ Todos devem conhecer o fluxo completo. Para organizar uma primeira leitura, uma 
 
 ## Limites assumidos do projeto
 
-- Não há frontend próprio: usamos clientes HTTP, a interface do DRF e Swagger.
+- Há um painel simples em HTML e CSS servido pelo Django, além do DRF e Swagger.
 - Não há login na API pública nem autorização por cliente.
 - Não há histórico de movimentação, pagamento ou transição obrigatória de status.
 - O detalhe de cliente aninha todas as ordens; o crescimento dessa lista exigiria mudar a representação.

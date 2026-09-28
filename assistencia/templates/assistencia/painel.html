@@ -1,0 +1,107 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if eh_ordem %}Ordens de serviço{% else %}Clientes{% endif %} · Bancada</title>
+  <link rel="stylesheet" href="{% static 'assistencia/painel.css' %}">
+</head>
+<body>
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+<div class="layout">
+  <aside class="sidebar">
+    <a class="brand" href="/"><span class="brand-icon" aria-hidden="true">b.</span><span>Bancada<small>ASSISTÊNCIA TÉCNICA</small></span></a>
+    <p class="nav-label">ESPAÇO DE TRABALHO</p>
+    <nav aria-label="Navegação principal">
+      <a href="/?recurso=ordens" {% if eh_ordem %}class="active" aria-current="page"{% endif %}><span aria-hidden="true">▤</span> Ordens de serviço</a>
+      <a href="/?recurso=clientes" {% if not eh_ordem %}class="active" aria-current="page"{% endif %}><span aria-hidden="true">◎</span> Clientes</a>
+    </nav>
+    <div class="sidebar-note"><span class="note-dot"></span> Tudo em um só lugar<p>Organize os atendimentos e acompanhe cada solicitação.</p></div>
+    <div class="sidebar-footer"><a href="/api/docs/" target="_blank" rel="noopener">Documentação da API ↗</a><small>Projeto acadêmico · Django + DRF</small></div>
+  </aside>
+
+  <main id="conteudo">
+    <header class="topbar"><span>GESTÃO DE ATENDIMENTOS</span><span class="local-badge"><i></i> Ambiente local</span></header>
+    <div class="page-heading">
+      <div><p class="eyebrow">SEU DIA, MAIS ORGANIZADO</p><h1>{% if eh_ordem %}Ordens de serviço{% else %}Clientes{% endif %}</h1><p>{% if eh_ordem %}Da entrada à conclusão, acompanhe cada equipamento.{% else %}Quem confia no seu trabalho, sempre por perto.{% endif %}</p></div>
+      <a class="button primary" href="/?recurso={{ recurso }}#formulario">+ {% if eh_ordem %}Nova ordem{% else %}Novo cliente{% endif %}</a>
+    </div>
+
+    <section class="metrics" aria-label="Resumo geral das ordens">
+      <article><span>Total de ordens</span><strong>{% if resumo %}{{ resumo.total }}{% else %}—{% endif %}</strong><small>Todos os atendimentos</small></article>
+      <article><span>Em aberto</span><strong>{% if resumo %}{{ resumo.por_status.aberta }}{% else %}—{% endif %}</strong><small><i class="dot amber"></i> Aguardando atendimento</small></article>
+      <article><span>Em andamento</span><strong>{% if resumo %}{{ resumo.por_status.em_andamento }}{% else %}—{% endif %}</strong><small><i class="dot blue"></i> Na bancada</small></article>
+      <article class="metric-featured"><span>Valor estimado total</span><strong>{% if resumo %}R$ {{ resumo.valor_total_estimado|floatformat:2 }}{% else %}—{% endif %}</strong><small>Orçamentos de todos os status</small></article>
+    </section>
+
+    {% for aviso in avisos %}<p class="warning" role="alert">{{ aviso }}</p>{% endfor %}
+    <section id="resultado" class="result {% if resultado.ok %}success{% else %}failure{% endif %}" aria-label="Resultado da requisição" role="{% if resultado.ok %}status{% else %}alert{% endif %}">
+      <div class="result-line">
+        <span class="result-icon" aria-hidden="true">{% if resultado.ok %}✓{% else %}!{% endif %}</span>
+        <div class="result-description"><strong>{{ resultado.titulo }}</strong><span>{{ resultado.metodo }} <code>{{ resultado.caminho }}</code></span></div>
+        <span class="http-code">{% if resultado.status %}{{ resultado.status }} {{ resultado.motivo }}{% else %}Sem conexão{% endif %}</span>
+      </div>
+      {% if mensagens %}<ul class="error-list">{% for mensagem in mensagens %}<li>{{ mensagem }}</li>{% endfor %}</ul>{% endif %}
+      <details class="response"><summary>Ver resposta da API</summary>{% if resultado.status == 204 %}<p>Sem conteúdo. A exclusão foi concluída e a API retornou um corpo vazio.</p>{% elif resultado.json %}<pre>{{ resultado.json }}</pre>{% else %}<p>Nenhuma resposta HTTP foi recebida.</p>{% endif %}</details>
+    </section>
+
+    <div class="workspace">
+      <section class="card records">
+        <div class="card-heading"><div><h2>{% if eh_ordem %}Atendimentos{% else %}Seus clientes{% endif %} <span class="count">{{ total }}</span></h2><p>{% if eh_ordem %}Acompanhe, consulte e atualize suas ordens.{% else %}Consulte os dados e o histórico de cada cliente.{% endif %}</p></div></div>
+        <form method="get" class="filters">
+          <input type="hidden" name="recurso" value="{{ recurso }}">
+          <div class="search-field"><label class="sr-only" for="busca">Buscar</label><input id="busca" name="search" value="{{ filtros.search }}" placeholder="{% if eh_ordem %}Buscar equipamento ou cliente…{% else %}Buscar nome ou e-mail…{% endif %}"></div>
+          {% if eh_ordem %}<label class="sr-only" for="filtro-status">Filtrar por status</label><select id="filtro-status" name="status"><option value="">Todos os status</option>{% for valor, rotulo in status_opcoes %}<option value="{{ valor }}" {% if filtros.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>{% endif %}
+          <label class="sr-only" for="ordenacao">Ordenação</label><select id="ordenacao" name="ordering">{% if eh_ordem %}<option value="-criado_em">Mais recentes</option><option value="-valor_estimado" {% if filtros.ordering == "-valor_estimado" %}selected{% endif %}>Maior valor</option><option value="valor_estimado" {% if filtros.ordering == "valor_estimado" %}selected{% endif %}>Menor valor</option>{% else %}<option value="nome">Nome: A–Z</option><option value="-nome" {% if filtros.ordering == "-nome" %}selected{% endif %}>Nome: Z–A</option>{% endif %}</select>
+          <button class="button secondary" type="submit">Filtrar</button>
+          {% if filtros %}<a class="clear" href="/?recurso={{ recurso }}">Limpar</a>{% endif %}
+        </form>
+        <div class="table-wrap"><table>
+          <thead><tr>{% if eh_ordem %}<th>Equipamento / cliente</th><th>Status</th><th>Valor estimado</th>{% else %}<th>Cliente</th><th>Contato</th>{% endif %}<th><span class="sr-only">Ações</span></th></tr></thead>
+          <tbody>{% for item in registros %}<tr {% if item.id == selecionado.id %}class="selected"{% endif %}>
+            {% if eh_ordem %}<td><div class="row-title"><span class="record-id">#{{ item.id|stringformat:"03d" }}</span><strong>{{ item.equipamento }}</strong></div><small>{{ item.cliente.nome }} <span class="separator">·</span> Prioridade {{ item.prioridade }}</small></td><td><span class="status {{ item.status }}">{% for valor, rotulo in status_opcoes %}{% if valor == item.status %}{{ rotulo }}{% endif %}{% endfor %}</span></td><td class="money">R$ {{ item.valor_estimado|floatformat:2 }}</td>
+            {% else %}<td><div class="row-title"><span class="avatar">{{ item.nome|slice:":1"|upper }}</span><strong>{{ item.nome }}</strong></div><small>Cliente #{{ item.id|stringformat:"03d" }}</small></td><td><span class="email">{{ item.email }}</span><small>{{ item.telefone }}</small></td>{% endif %}
+            <td class="row-actions"><a href="/?recurso={{ recurso }}&amp;id={{ item.id }}#formulario" aria-label="Abrir {% if eh_ordem %}ordem{% else %}cliente{% endif %} {{ item.id }}">Abrir <span aria-hidden="true">↗</span></a></td>
+          </tr>{% empty %}<tr><td colspan="4" class="empty"><span aria-hidden="true">◎</span><strong>Nenhum registro para mostrar</strong><p>Cadastre um {% if eh_ordem %}atendimento{% else %}cliente{% endif %} ou ajuste os filtros.</p></td></tr>{% endfor %}</tbody>
+        </table></div>
+        <div class="pagination"><span>Página {{ pagina }} <span class="separator">·</span> {{ total }} registro{{ total|pluralize }}</span><div>{% if anterior %}<a class="button secondary small" href="{{ anterior }}">← Anterior</a>{% else %}<span class="button secondary small disabled">← Anterior</span>{% endif %}{% if proxima %}<a class="button secondary small" href="{{ proxima }}">Próxima →</a>{% else %}<span class="button secondary small disabled">Próxima →</span>{% endif %}</div></div>
+        <form method="get" class="lookup"><input type="hidden" name="recurso" value="{{ recurso }}"><label for="consulta-id">Consultar pelo ID</label><input id="consulta-id" type="number" name="id" min="1" required placeholder="Ex.: 12"><button type="submit" class="text-button">Consultar →</button></form>
+      </section>
+
+      <section class="card editor" id="formulario">
+        <div class="card-heading"><div><p class="eyebrow">{% if selecionado %}REGISTRO #{{ selecionado.id|stringformat:"03d" }}{% else %}NOVO CADASTRO{% endif %}</p><h2>{% if selecionado %}Editar {% if eh_ordem %}ordem{% else %}cliente{% endif %}{% else %}{% if eh_ordem %}Nova ordem{% else %}Novo cliente{% endif %}{% endif %}</h2></div><span class="method-label">{% if selecionado %}PUT{% else %}POST{% endif %}</span></div>
+        <form method="post" class="edit-form" novalidate>
+          {% csrf_token %}<input type="hidden" name="recurso" value="{{ recurso }}"><input type="hidden" name="acao" value="{% if selecionado %}editar{% else %}criar{% endif %}"><input type="hidden" name="id" value="{{ selecionado.id }}">
+          {% if eh_ordem %}
+          <label for="cliente">Cliente</label><select id="cliente" name="cliente_id"><option value="">Selecione um cliente</option>{% for cliente in clientes %}<option value="{{ cliente.id }}" {% if cliente.id|stringformat:"s" == formulario.cliente_id|stringformat:"s" %}selected{% endif %}>{{ cliente.nome }} · #{{ cliente.id }}</option>{% endfor %}</select>{% if erros.cliente_id %}<small class="field-error">{{ erros.cliente_id|join:" " }}</small>{% endif %}
+          {% if not clientes %}<small>Comece pelo <a href="/?recurso=clientes#formulario">cadastro de um cliente</a>.</small>{% endif %}
+          <label for="equipamento">Equipamento</label><input id="equipamento" name="equipamento" value="{{ formulario.equipamento }}" placeholder="Ex.: Notebook Dell">{% if erros.equipamento %}<small class="field-error">{{ erros.equipamento|join:" " }}</small>{% endif %}
+          <label for="descricao">Descrição do problema</label><textarea id="descricao" name="descricao" rows="3" placeholder="O que precisa de atenção?">{{ formulario.descricao }}</textarea>{% if erros.descricao %}<small class="field-error">{{ erros.descricao|join:" " }}</small>{% endif %}
+          <div class="form-row"><div><label for="status">Status</label><select id="status" name="status">{% for valor, rotulo in status_opcoes %}<option value="{{ valor }}" {% if formulario.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div><div><label for="prioridade">Prioridade</label><select id="prioridade" name="prioridade">{% for valor, rotulo in prioridades %}<option value="{{ valor }}" {% if formulario.prioridade == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div></div>
+          <label for="valor">Valor estimado (R$)</label><input id="valor" name="valor_estimado" type="number" step="0.01" value="{{ formulario.valor_estimado }}" placeholder="0,00">{% if erros.valor_estimado %}<small class="field-error">{{ erros.valor_estimado|join:" " }}</small>{% endif %}
+          {% else %}
+          <label for="nome">Nome completo</label><input id="nome" name="nome" value="{{ formulario.nome }}" placeholder="Ex.: Marina Souza">{% if erros.nome %}<small class="field-error">{{ erros.nome|join:" " }}</small>{% endif %}
+          <label for="email">E-mail</label><input id="email" name="email" type="email" value="{{ formulario.email }}" placeholder="nome@exemplo.com">{% if erros.email %}<small class="field-error">{{ erros.email|join:" " }}</small>{% endif %}
+          <label for="telefone">Telefone com DDD</label><input id="telefone" name="telefone" inputmode="numeric" value="{{ formulario.telefone }}" placeholder="11987654321"><small>10 ou 11 dígitos, sem espaços ou pontuação.</small>{% if erros.telefone %}<small class="field-error">{{ erros.telefone|join:" " }}</small>{% endif %}
+          {% endif %}
+          <button class="button primary full" type="submit">{% if selecionado %}Salvar alterações{% else %}Cadastrar {% if eh_ordem %}ordem{% else %}cliente{% endif %}{% endif %} <span aria-hidden="true">→</span></button>
+          {% if selecionado %}<a class="cancel" href="/?recurso={{ recurso }}">Voltar para novo cadastro</a>{% endif %}
+        </form>
+        {% if selecionado %}
+        <details class="quick-edit"><summary>Alterar apenas {% if eh_ordem %}o status{% else %}o telefone{% endif %} <span class="method-label">PATCH</span></summary>
+          <form method="post">{% csrf_token %}<input type="hidden" name="recurso" value="{{ recurso }}"><input type="hidden" name="acao" value="parcial"><input type="hidden" name="id" value="{{ selecionado.id }}">
+          {% if eh_ordem %}<label for="status-parcial">Novo status</label><select id="status-parcial" name="status">{% for valor, rotulo in status_opcoes %}<option value="{{ valor }}" {% if selecionado.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>{% else %}<label for="telefone-parcial">Novo telefone</label><input id="telefone-parcial" name="telefone" value="{{ selecionado.telefone }}">{% endif %}
+          <button class="button secondary full" type="submit">Atualizar campo</button></form>
+        </details>
+        <div class="delete-area">{% if confirmar_exclusao %}<p><strong>Excluir este registro?</strong></p><p>Esta ação remove {% if eh_ordem %}a ordem{% else %}o cliente{% endif %} #{{ selecionado.id }}. Clientes com ordens vinculadas são protegidos pela API.</p><form method="post">{% csrf_token %}<input type="hidden" name="recurso" value="{{ recurso }}"><input type="hidden" name="acao" value="excluir"><input type="hidden" name="id" value="{{ selecionado.id }}"><button class="button danger full" type="submit">Confirmar exclusão</button></form><a class="cancel" href="/?recurso={{ recurso }}&amp;id={{ selecionado.id }}#formulario">Cancelar</a>{% else %}<a href="/?recurso={{ recurso }}&amp;id={{ selecionado.id }}&amp;excluir=1#formulario">Excluir {% if eh_ordem %}ordem{% else %}cliente{% endif %}</a><span class="method-label">DELETE</span>{% endif %}</div>
+        {% endif %}
+      </section>
+    </div>
+    {% if selecionado %}<section class="card related"><div class="card-heading"><div><h2>{% if eh_ordem %}Cliente vinculado{% else %}Ordens deste cliente{% endif %}</h2><p>Relacionamento retornado pela API no detalhe do registro.</p></div><span class="method-label">GET</span></div>{% if eh_ordem %}<div class="related-content"><strong>{{ selecionado.cliente.nome }}</strong><span>{{ selecionado.cliente.email }}</span><a href="/?recurso=clientes&amp;id={{ selecionado.cliente.id }}#formulario">Abrir cliente →</a></div>{% else %}<div class="related-content">{% for ordem in selecionado.ordens %}<a href="/?recurso=ordens&amp;id={{ ordem.id }}#formulario">#{{ ordem.id }} · {{ ordem.equipamento }}</a>{% empty %}<span>Este cliente ainda não possui ordens.</span>{% endfor %}</div>{% endif %}</section>{% endif %}
+    <footer class="page-footer"><span>Bancada · Assistência técnica</span><span>HTML + CSS · Formulários processados pelo Django</span></footer>
+  </main>
+</div>
+</body>
+</html>
+

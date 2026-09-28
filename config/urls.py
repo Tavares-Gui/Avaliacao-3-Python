@@ -1,10 +1,10 @@
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import RedirectView
+from assistencia.painel import painel
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
-    path("", RedirectView.as_view(url="/api/", permanent=False)),
+    path("", painel, name="painel"),
     path("admin/", admin.site.urls),
     path("api/", include("assistencia.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
